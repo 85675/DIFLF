@@ -55,7 +55,65 @@ class DCNN(nn.Module):
 
         return F.leaky_relu(self.linear1(content)),F.leaky_relu(self.linear2(style1)),F.leaky_relu(self.linear3(style2)),v1,v2,x11,x22,vc1
 
+class MyDataset0(Dataset):
+    def __init__(self, img_path1):
+        super(MyDataset0, self).__init__()
+        if “benign”：
+            all_dir_E.append((img_path1, 0))
+        else:
+            all_dir_E.append((img_path1, 1))
+        self.sample_list_E = all_dir_E
 
+    def __len__(self):
+        return len(self.sample_list_E)
+
+    def __getitem__(self, index):
+        item_E1,  label = self.sample_list_E[index]
+        image_E1 = cv2.imread(item_E1)
+        image_E1 = Image.fromarray(image_E1)
+        return image_E1,label
+        
+class MyDataset1(Dataset):
+    def __init__(self,dataset,transform1,transform2):
+        self.dataset = dataset
+        self.transform1 = transform1
+        self.transform2 = transform2
+    def __len__(self):
+        return len(self.dataset)
+    def __getitem__(self, idx):
+        img,label=self.dataset[idx]
+        number = random.randint(0, 1)
+        if number == 0:
+            img1 = self.transform1(img)
+            img2 = self.transform2(img)
+            style1 = 0
+            style2 = 1
+        else:
+            img1 = self.transform2(img)
+            img2 = self.transform1(img)
+            style1 = 1
+            style2 = 0
+        return img1,img2,label,style1,style2,0
+        
+def loadData_train(train_dataset, batch_size, shuffle=False):
+    data_transform_train = transforms.Compose([
+        transforms.Resize((800, 800)),
+        transforms.ColorJitter(brightness=[0, 2], contrast=[0, 2],
+                               saturation=[0, 2],hue=[-0.5,0.5]),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5],),
+    ])
+    data_transform_train2 = transforms.Compose([
+        transforms.Resize((800, 800)),
+        transforms.ColorJitter(brightness=[2, 4], contrast=[2, 4],
+                               saturation=[2, 4],hue=[-0.5,0.5]),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5], ),
+    ])
+    dataset = MyDataset1(train_dataset, transform1=data_transform_train, transform2=data_transform_train2)
+    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8)
+
+train_loader = loadData_train(train_dataset, 24, shuffle=True)
 
 def train():
     # Model
